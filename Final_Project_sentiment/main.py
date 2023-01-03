@@ -7,7 +7,7 @@ from transformers import TFAutoModelForSequenceClassification
 from scipy.special import softmax
 
 def main():
-    df = read_data('/NLP_Exam/Final_Project_sentiment/Clean_scripts.csv')
+    df = read_data('Clean_scripts.csv')
 
     def sentiment_analysis(row):
         text = row['Line']  # Get the text from the 'Line' column
@@ -31,7 +31,7 @@ def main():
     text_data = df['Line'].values
 
     df['sentiment'] = df.apply(sentiment_analysis, axis=1)
-    df.to_csv('/NLP_Exam/Final_Project_sentiment/sentiment_neutral.csv', index=False)
+    df.to_csv('sentiment_neutral.csv', index=False)
 
 if __name__ == "__main__":
    #args = parseArguments()

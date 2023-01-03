@@ -6,7 +6,7 @@ from bertopic.vectorizers import ClassTfidfTransformer
 from data import read_data
 
 def main():
-    data, lines, gender_class = read_data('/NLP_Exam/Final_project_topic/Clean_scripts.csv')
+    data, lines, gender_class = read_data('Clean_scripts.csv')
     
     vectorizer_model = CountVectorizer(stop_words="english")
     ctfidf_model = ClassTfidfTransformer()
@@ -20,4 +20,4 @@ def main():
     topic_model.get_topic_info()
     topic_model.visualize_barchart(top_n_topics=200)
     topics_per_class = topic_model.topics_per_class(lines, classes=gender_class)
-    topics_per_class.to_csv("/NLP_Exam/Final_project_topic/Final_project_topic/topic.csv")
+    topics_per_class.to_csv("topic.csv")

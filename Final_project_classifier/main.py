@@ -49,8 +49,8 @@ def b_metrics(preds, labels):
   return b_accuracy, b_precision, b_recall, b_specificity
 
 def main():
-  train_path = '/NLP_Exam/Final_project_classifier/Data_for_classification/train89.csv'
-  test_path = '/NLP_Exam/Final_project_classifier/testset_for_classifier/Data_for_classification/test89.csv'
+  train_path = '/Data_for_classification/train89.csv'
+  test_path = '/Data_for_classification/test89.csv'
 
   train_text, train_labels, test_text, test_labels, tensor_train_labels, tensor_test_labels = read_data(train_path, test_path)
 
@@ -246,7 +246,7 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
 
   # Show the plot
   plt.show()
-  fig.savefig("/NLP_Exam/Final_project_classifier/plots/confusion_matrix.png")
+  fig.savefig("/plots/confusion_matrix.png")
 
 
 if __name__ == "__main__":
