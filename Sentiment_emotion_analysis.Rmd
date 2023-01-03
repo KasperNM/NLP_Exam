@@ -1,0 +1,92 @@
+---
+title: "Sentiment_analysis"
+author: "Kasper & Manon"
+date: "2023-01-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Loading packages
+install.packages("pacman")
+pacman::p_load(tidyverse, lmerTest, stats)
+```
+
+```{r}
+#Load in the data
+neutral <- read_csv("Data_for_sentiment_analysis/sentiment_neutral.csv")
+```
+
+#Removing all lines of neutral sentiment 
+```{r}
+neutral_removed <- subset(neutral, sentiment != "neutral" )
+write.csv(neutral_removed, file = "Data_for_sentiment_analysis/neutral_removed.csv")
+```
+
+#Load in emotion DF (emotional analysis run in python using the neutral_removed.csv)
+```{r}
+emotion_df <- read_csv("Data_for_sentiment_analysis/emotion_df.csv")
+```
+
+```{r}
+#Weighting for logistic regression
+#distribution of data points:
+freq_male <- 0.676
+freq_female <- 0.324
+
+# Compute the weights as the inverse of the class frequencies
+weights <- c(1 / freq_male, 1 / freq_female)
+
+emotion_df$Weights <- 0
+emotion_df <- mutate(emotion_df, Weights = recode(Gender_label, 
+                                       "male"=weights[1],
+                                       "female"=weights[2]))
+```
+
+#Logistic regression
+```{r}
+emotion_df$Gender_label <- as.factor(emotion_df$Gender_label)
+glm <- glm(Gender_label ~ 0 + Emotion_sentiment, data = emotion_df, weights = Weights, family = "binomial")
+summary(glm)
+```
+
+#Calculating probabilities
+```{r}
+predictions <- predict(glm, type = "response")
+
+# Convert the log-odds to probabilities
+probabilities <- stats::plogis(predictions)
+
+coefs <- coef(glm)
+
+#print the probabilities
+stats::plogis(coefs[1])
+stats::plogis(coefs[2])
+stats::plogis(coefs[3])
+stats::plogis(coefs[4])
+stats::plogis(coefs[5])
+stats::plogis(coefs[6])
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

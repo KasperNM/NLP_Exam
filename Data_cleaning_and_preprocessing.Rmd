@@ -1,0 +1,837 @@
+---
+title: "Cleaning_and_preprocessing_scripts"
+author: "Kasper & Manon"
+date: "2023-01-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Loading packages
+install.packages("pacman")
+pacman::p_load(tidyverse, lmerTest, stats)
+```
+
+### We have script data from a handfull of sitcoms, but they are not all in the same format. Therefore we need to make sure they all have the same columns and structure The structure of the column names will be as follows: Show    Season    Episode   Character   Line    Gender(of character)   
+
+### The Big Bang Theory
+```{r The Big Bang Theory}
+d <- read.csv("Raw_scripts/1_10_seasons_tbbt.csv")
+
+d$Show <- "The Big Bang Theory"
+d <- mutate(.data = d, 
+            Season = sub(" Episode.*", "", sub(".*Series ", "", episode_name)),
+            Episode = sub(" – Pilot.*","", sub(".*Episode ", "", episode_name)))
+d$Character <- d$person_scene
+d$Line <- d$dialogue
+
+# there are still some that have episode names (not just numbers)
+#MISSING CODE
+# gsub("[^0-9.-]", "", x) something something
+
+
+# make clean dataframe
+colnames(d)
+data <- d[, c(4,5,6,7,8)]
+
+
+# remove all rows where the data$Charcter isn't a character or whose gender is not identifiable
+# (e.g. Scene, mouths, and photographer)
+# see which rows have actual dialog lines in them
+unique(data$Character)
+data[data$Character == "Scene", ]
+data[data$Character == "(mouths)", ]
+data[data$Character == "(mouths)", ]
+
+data[str_detect(data$Character, '\\)'), ]
+list1 <- data$Character
+unique(list1[str_detect(list1, '\\)')])
+# There is sometimes real characters that accidentally have an end parenthesis in their name
+# "Raj)", "Sheldon)", "Howard)", "Penny(voice)", "Wolowitz)", "Emily)", "Mitch)", "Gablehouser)", "(Wyatt)", "Kevin)", "Leonard)", "Cooper)", "Picard)", "Lucy)", "Penny)", "Priya)", "Ricky)", "Alex)", "Amy(off)", "Penny(leaving)", "Cole)"
+
+# so we need to 'save' these, by removing the parenthesis (and additional irrelevant stuff like '(leaving)')
+# data <- str_replace(data$Character, "Raj)", "Raj")
+data <- mutate(data, Character = recode(Character, 
+                            "Raj)"="Raj",
+                            "Sheldon)"="Sheldon",
+                            "Howard)"="Howard",
+                            "Penny(voice)"="Penny",
+                            "Wolowitz)"="Wolowitz",
+                            "Emily)"="Emily",
+                            "Mitch)"="Mitch",
+                            "Gablehouser)"="Gablehouser",
+                            "(Wyatt)"="Wyatt",
+                            "Kevin)"="Kevin",
+                            "Leonard)"="Leonard",
+                            "Cooper)"="Cooper",
+                            "Picard)"="Picard",
+                            "Lucy)"="Lucy",
+                            "Penny)"="Penny",
+                            "Priya)"="Priya",
+                            "Ricky)"="Ricky",
+                            "Alex)"="Alex",
+                            "Amy(off)"="Amy",
+                            "Penny(leaving)"="Penny",
+                            "Cole)"="Cole"))
+
+# pick out the top characters, and discarding the rest
+uniquenames <- unique(data$Character)
+freqlist <- c()
+
+for (uniquename in uniquenames){
+  uniquefreq <- length(data[data$Character == uniquename, ]$Character)
+  freqlist <- c(freqlist, uniquefreq)
+}
+
+namefreqs <- data.frame(uniquenames,freqlist)
+
+# pick out e.g. top 15 speaking characters
+top15 <- c("Sheldon","Leonard","Penny","Howard","Raj","Amy","Bernadette","Stuart","Cooper","Priya","Emily","Beverley",
+           "Zack","Arthur","Wil")
+clean <- data[data$Character %in% top15,]
+
+
+# label them male (0) or female (1)
+clean <- mutate(clean, Gender = recode(Character, 
+                                       "Sheldon"=0,
+                                       "Leonard"=0,
+                                       "Penny"=1,
+                                       "Howard"=0,
+                                       "Raj"=0,
+                                       "Amy"=1,
+                                       "Bernadette"=1,
+                                       "Stuart"=0,
+                                       "Cooper"=0, 
+                                       "Priya"=1,
+                                       "Emily"=1,
+                                       "Beverley"=1,
+                                       "Zack"=0,
+                                       "Arthur"=0,
+                                       "Wil"=0))
+
+# mean(clean$Gender)
+# 30% of lines are spoken by female characters
+
+#Adding gender column
+clean$Gender <- as.factor(clean$Gender)
+
+clean <- mutate(clean, Gender_label = recode(Gender, 
+                                       "0"="male",
+                                       "1"="female"))
+clean$Gender <- as.numeric(clean$Gender)
+
+clean$Rownumber <- 1:nrow(clean)
+clean$Year <- 0
+
+#From the BBT episodes wikipedia episodes a year column is added
+for (i in 1:nrow(clean)){
+  if (clean$Rownumber[i] < 1793){
+    clean$Year[i] <- "2007"
+  }
+  else if (clean$Rownumber[i] > 1792 & clean$Rownumber[i] < 5795){
+    clean$Year[i] <- "2008"
+  }
+  else if (clean$Rownumber[i] > 5794 & clean$Rownumber[i] < 10546){
+    clean$Year[i] <- "2009"
+  }
+  else if (clean$Rownumber[i] > 10545 & clean$Rownumber[i] < 15334){
+    clean$Year[i] <- "2010"
+  }
+  else if (clean$Rownumber[i] > 15333 & clean$Rownumber[i] < 20187){
+    clean$Year[i] <- "2011"
+  }
+  else if (clean$Rownumber[i] > 20186 & clean$Rownumber[i] < 24665){
+    clean$Year[i] <- "2012"
+  }
+  else if (clean$Rownumber[i] > 24664 & clean$Rownumber[i] < 29251){
+    clean$Year[i] <- "2013"
+  }
+  else if (clean$Rownumber[i] > 29250 & clean$Rownumber[i] < 34245){
+    clean$Year[i] <- "2014"
+  }
+  else if (clean$Rownumber[i] > 34244 & clean$Rownumber[i] < 39110){
+    clean$Year[i] <- "2015"
+  }
+  else if (clean$Rownumber[i] > 39109 & clean$Rownumber[i] < 44091){
+    clean$Year[i] <- "2016"
+  }
+  else if (clean$Rownumber[i] > 44090){
+    clean$Year[i] <- "2017"
+  }
+} 
+
+#write.csv(clean, file = "BBT_Year.csv")
+```
+
+#These preprocessing steps are done for all 7 scripts
+
+##Friends
+```{r}
+#Load in friends data
+friends_df <- read_csv("Raw_scripts/friends_quotes.csv")
+
+friends_df$Show <- "Friends"
+names(friends_df)[names(friends_df) == "season"] <- "Season"
+names(friends_df)[names(friends_df) == "episode_number"] <- "Episode"
+names(friends_df)[names(friends_df) == "author"] <- "Character"
+names(friends_df)[names(friends_df) == "quote"] <- "Line"
+friends_df$episode_title = NULL
+friends_df$quote_order = NULL
+
+uniquenames <- unique(friends_df$Character)
+freqlist <- c()
+
+for (uniquename in uniquenames){
+  uniquefreq <- length(friends_df[friends_df$Character == uniquename, ]$Character)
+  freqlist <- c(freqlist, uniquefreq)
+}
+
+namefreqs <- data.frame(uniquenames,freqlist)
+
+friends_df <- mutate(friends_df, Character = recode(Character, 
+                            "ROSS"="Ross",
+                            "RACHEL"="Rachel",
+                            "CHANDLER"="Chandler",
+                            "MONICA"="Monica",
+                            "PHOEBE"="Phoebe",
+                            "JOEY"="Joey",
+                            "RACH"="Rachel"))
+
+top15_friends <- c("Ross","Rachel","Chandler","Monica","Phoebe","Joey","Mike","Janice","Charlie",
+           "Emily","Mr. Geller","Carol","Tag","David","Paul")
+friends_clean <- friends_df[friends_df$Character %in% top15_friends,]
+
+#Adding gender column
+friends_clean <- mutate(friends_clean, Gender = recode(Character, 
+                                       "Ross"=0,
+                                       "Chandler"=0,
+                                       "Rachel"=1,
+                                       "Joey"=0,
+                                       "Mike"=0,
+                                       "Monica"=1,
+                                       "Phoebe"=1,
+                                       "Charlie"=0,
+                                       "Mr. Geller"=0, 
+                                       "Carol"=1,
+                                       "Emily"=1,
+                                       "Janice"=1,
+                                       "Paul"=0,
+                                       "David"=0,
+                                       "Tag"=0))
+#checking if all 15 characters are in the df
+length(unique(friends_clean$Character))
+
+#Adding gender column
+friends_clean$Gender <- as.factor(friends_clean$Gender)
+
+friends_clean <- mutate(friends_clean, Gender_label = recode(Gender, 
+                                       "0"="male",
+                                       "1"="female"))
+friends_clean$Gender <- as.numeric(friends_clean$Gender)
+
+#Adding year
+friends_clean$Rownumber <- 1:nrow(friends_clean)
+friends_clean$Year <- 0
+
+for (i in 1:nrow(friends_clean)){
+  if (friends_clean$Rownumber[i] < 2063){
+    friends_clean$Year[i] <- "1994"
+  }
+  else if (friends_clean$Rownumber[i] > 2062 & friends_clean$Rownumber[i] < 6323){
+    friends_clean$Year[i] <- "1995"
+  }
+  else if (friends_clean$Rownumber[i] > 6322 & friends_clean$Rownumber[i] < 11090){
+    friends_clean$Year[i] <- "1996"
+  }
+  else if (friends_clean$Rownumber[i] > 11089 & friends_clean$Rownumber[i] < 16368){
+    friends_clean$Year[i] <- "1997"
+  }
+  else if (friends_clean$Rownumber[i] > 16367 & friends_clean$Rownumber[i] < 21460){
+    friends_clean$Year[i] <- "1998"
+  }
+  else if (friends_clean$Rownumber[i] > 21459 & friends_clean$Rownumber[i] < 26940){
+    friends_clean$Year[i] <- "1999"
+  }
+  else if (friends_clean$Rownumber[i] > 26939 & friends_clean$Rownumber[i] < 32792){
+    friends_clean$Year[i] <- "2000"
+  }
+  else if (friends_clean$Rownumber[i] > 32791 & friends_clean$Rownumber[i] < 38584){
+    friends_clean$Year[i] <- "2001"
+  }
+  else if (friends_clean$Rownumber[i] > 38583 & friends_clean$Rownumber[i] < 43627){
+    friends_clean$Year[i] <- "2002"
+  }
+  else if (friends_clean$Rownumber[i] > 43626 & friends_clean$Rownumber[i] < 48693){
+    friends_clean$Year[i] <- "2003"
+  }
+  else if (friends_clean$Rownumber[i] > 48692){
+    friends_clean$Year[i] <- "2004"
+  }
+} 
+
+#Writing csv file
+#write.csv(friends_clean, file = "friends_Year.csv")
+```
+## R Markdown
+
+##Frasier
+```{r}
+frasier_df <- read_csv("Raw_scripts/Fraiser_script_no.csv")
+
+#adding and renaming columns
+frasier_df$Show <- "Frasier"
+names(frasier_df)[names(frasier_df) == "dialog"] <- "Line"
+names(frasier_df)[names(frasier_df) == "cast"] <- "Character"
+
+uniquenames <- unique(frasier_df$Character)
+freqlist <- c()
+
+for (uniquename in uniquenames){
+  uniquefreq <- length(frasier_df[frasier_df$Character == uniquename, ]$Character)
+  freqlist <- c(freqlist, uniquefreq)
+}
+
+namefreqs <- data.frame(uniquenames,freqlist)
+
+top15_frasier <- c("Frasier","Niles","Martin","Daphne","Roz","Bulldog","Lilith","Kenny","Bebe",
+           "Donny","Freddie","Charlotte","Ronee","Sherry","Gil")
+frasier_clean <- frasier_df[frasier_df$Character %in% top15_frasier,]
+
+#Adding gender column
+frasier_clean <- mutate(frasier_clean, Gender = recode(Character, 
+                                       "Frasier"=0,
+                                       "Niles"=0,
+                                       "Daphne"=1,
+                                       "Martin"=0,
+                                       "Roz"=1,
+                                       "Bulldog"=0,
+                                       "Lilith"=1,
+                                       "Kenny"=0,
+                                       "Bebe"=1, 
+                                       "Donny"=0,
+                                       "Freddie"=0,
+                                       "Charlotte"=1,
+                                       "Ronee"=1,
+                                       "Sherry"=0,
+                                       "Gil"=0))
+
+#Adding gender label
+frasier_clean$Gender <- as.factor(frasier_clean$Gender)
+
+frasier_clean <- mutate(frasier_clean, Gender_label = recode(Gender, 
+                                       "0"="male",
+                                       "1"="female"))
+frasier_clean$Gender <- as.numeric(frasier_clean$Gender)
+#checking if all 15 characters are in the df
+length(unique(frasier_clean$Character))
+
+#Adding year
+frasier_clean$Rownumber <- 1:nrow(frasier_clean)
+frasier_clean$Year <- 0
+
+for (i in 1:nrow(frasier_clean)){
+  if (frasier_clean$Rownumber[i] < 2344){
+    frasier_clean$Year[i] <- "1993"
+  }
+  else if (frasier_clean$Rownumber[i] > 2343 & frasier_clean$Rownumber[i] < 6732){
+    frasier_clean$Year[i] <- "1994"
+  }
+  else if (frasier_clean$Rownumber[i] > 6731 & frasier_clean$Rownumber[i] < 11076){
+    frasier_clean$Year[i] <- "1995"
+  }
+  else if (frasier_clean$Rownumber[i] > 11075 & frasier_clean$Rownumber[i] < 15398){
+    frasier_clean$Year[i] <- "1996"
+  }
+  else if (frasier_clean$Rownumber[i] > 15397 & frasier_clean$Rownumber[i] < 20749){
+    frasier_clean$Year[i] <- "1997"
+  }
+  else if (frasier_clean$Rownumber[i] > 20748 & frasier_clean$Rownumber[i] < 26149){
+    frasier_clean$Year[i] <- "1998"
+  }
+  else if (frasier_clean$Rownumber[i] > 26148 & frasier_clean$Rownumber[i] < 31770){
+    frasier_clean$Year[i] <- "1999"
+  }
+  else if (frasier_clean$Rownumber[i] > 31769 & frasier_clean$Rownumber[i] < 36147){
+    frasier_clean$Year[i] <- "2000"
+  }
+  else if (frasier_clean$Rownumber[i] > 36146 & frasier_clean$Rownumber[i] < 41594){
+    frasier_clean$Year[i] <- "2001"
+  }
+  else if (frasier_clean$Rownumber[i] > 41593 & frasier_clean$Rownumber[i] < 45366){
+    frasier_clean$Year[i] <- "2002"
+  }
+  else if (frasier_clean$Rownumber[i] > 45365 & frasier_clean$Rownumber[i] < 49815){
+    frasier_clean$Year[i] <- "2003"
+  }
+  else if (frasier_clean$Rownumber[i] > 49814){
+    frasier_clean$Year[i] <- "2004"
+  }
+}
+
+#Writing csv file
+#write.csv(frasier_clean, file = "frasier_Year.csv")
+```
+
+## Parks and rec
+
+```{r}
+PaR_df <- read_csv("Raw_scripts/parks_and_rec_scripts.csv")
+PaR_df$...1 <- NULL
+PaR_df$Show <- "Parks and recreation"
+
+uniquenames <- unique(PaR_df$Character)
+freqlist <- c()
+
+for (uniquename in uniquenames){
+  uniquefreq <- length(PaR_df[PaR_df$Character == uniquename, ]$Character)
+  freqlist <- c(freqlist, uniquefreq)
+}
+
+namefreqs <- data.frame(uniquenames,freqlist)
+
+top15_PaR <- c("Leslie Knope","Tom Haverford","Andy Dwyer","Ben Wyatt","Ron Swanson","Ann Perkins","April Ludgate","Chris Traeger","Donna Meagle",
+           "Jerry Gergich","Mark Brendanawicz","Jeremy Jamm","Jean-Ralphio Saperstein","Jennifer Barkley","Dave Sanderson")
+PaR_clean <- PaR_df[PaR_df$Character %in% top15_PaR,]
+
+#Adding gender column
+PaR_clean <- mutate(PaR_clean, Gender = recode(Character, 
+                                       "Leslie Knope"=1,
+                                       "Tom Haverford"=0,
+                                       "Andy Dwyer"=0,
+                                       "Ben Wyatt"=0,
+                                       "Ron Swanson"=0,
+                                       "Ann Perkins"=1,
+                                       "April Ludgate"=1,
+                                       "Chris Traeger"=0,
+                                       "Donna Meagle"=1, 
+                                       "Jerry Gergich"=0,
+                                       "Mark Brendanawicz"=0,
+                                       "Jeremy Jamm"=0,
+                                       "Jean-Ralphio Saperstein"=0,
+                                       "Jennifer Barkley"=1,
+                                       "Dave Sanderson"=0))
+
+#Adding gender label
+PaR_clean$Gender <- as.factor(PaR_clean$Gender)
+
+PaR_clean <- mutate(PaR_clean, Gender_label = recode(Gender, 
+                                       "0"="male",
+                                       "1"="female"))
+PaR_clean$Gender <- as.numeric(PaR_clean$Gender)
+
+#checking if all 15 characters are in the df
+length(unique(PaR_clean$Character))
+
+#Adding year
+PaR_clean$Rownumber <- 1:nrow(PaR_clean)
+PaR_clean$Year <- 0
+
+for (i in 1:nrow(PaR_clean)){
+  if (PaR_clean$Rownumber[i] < 8216){
+    PaR_clean$Year[i] <- "2009"
+  }
+  else if (PaR_clean$Rownumber[i] > 8215 & PaR_clean$Rownumber[i] < 14165){
+    PaR_clean$Year[i] <- "2010"
+  }
+  else if (PaR_clean$Rownumber[i] > 14164 & PaR_clean$Rownumber[i] < 26489){
+    PaR_clean$Year[i] <- "2011"
+  }
+  else if (PaR_clean$Rownumber[i] > 26488 & PaR_clean$Rownumber[i] < 35901){
+    PaR_clean$Year[i] <- "2012"
+  }
+  else if (PaR_clean$Rownumber[i] > 35900 & PaR_clean$Rownumber[i] < 45661){
+    PaR_clean$Year[i] <- "2013"
+  }
+  else if (PaR_clean$Rownumber[i] > 45660 & PaR_clean$Rownumber[i] < 50658){
+    PaR_clean$Year[i] <- "2014"
+  }
+  else if (PaR_clean$Rownumber[i] > 50657){
+    PaR_clean$Year[i] <- "2015"
+  }
+} 
+
+#write.csv(PaR_clean, file = "Parks_and_rec_Year.csv")
+```
+
+
+```{r}
+seinfeld_df <- read_csv("Raw_scripts/Seinfeld-scripts-Kaggle-LSM_DAT_SCI.csv")
+
+seinfeld_df$Show <- "Seinfeld"
+names(seinfeld_df)[names(seinfeld_df) == "season"] <- "Season"
+names(seinfeld_df)[names(seinfeld_df) == "episode"] <- "Episode"
+names(seinfeld_df)[names(seinfeld_df) == "character"] <- "Character"
+names(seinfeld_df)[names(seinfeld_df) == "dialogue"] <- "Line"
+
+uniquenames <- unique(seinfeld_df$Character)
+freqlist <- c()
+
+for (uniquename in uniquenames){
+  uniquefreq <- length(seinfeld_df[seinfeld_df$Character == uniquename, ]$Character)
+  freqlist <- c(freqlist, uniquefreq)
+}
+
+namefreqs <- data.frame(uniquenames,freqlist)
+
+top15_seinfeld <- c("JERRY","GEORGE","ELAINE","KRAMER","NEWMAN","MORTY","HELEN","FRANK","SUSAN",
+           "ESTELLE","PUDDY","PETERMAN","LEO","JACK","LIPPMAN")
+seinfeld_clean <- seinfeld_df[seinfeld_df$Character %in% top15_seinfeld,]
+
+#Adding gender column
+seinfeld_clean <- mutate(seinfeld_clean, Gender = recode(Character, 
+                                       "JERRY"=0,
+                                       "GEORGE"=0,
+                                       "ELAINE"=1,
+                                       "KRAMER"=0,
+                                       "NEWMAN"=0,
+                                       "MORTY"=0,
+                                       "HELEN"=1,
+                                       "FRANK"=0,
+                                       "SUSAN"=1, 
+                                       "ESTELLE"=1,
+                                       "PUDDY"=0,
+                                       "PETERMAN"=0,
+                                       "LEO"=0,
+                                       "JACK"=0,
+                                       "LIPPMAN"=0))
+
+#Adding gender label
+seinfeld_clean$Gender <- as.factor(seinfeld_clean$Gender)
+
+seinfeld_clean <- mutate(seinfeld_clean, Gender_label = recode(Gender, 
+                                       "0"="male",
+                                       "1"="female"))
+seinfeld_clean$Gender <- as.numeric(seinfeld_clean$Gender)
+
+#checking if all 15 characters are in the df
+length(unique(seinfeld_clean$Character))
+
+#Adding year
+seinfeld_clean$Rownumber <- 1:nrow(seinfeld_clean)
+seinfeld_clean$Year <- 0
+
+for (i in 1:nrow(seinfeld_clean)){
+  if (seinfeld_clean$Rownumber[i] < 188){
+    seinfeld_clean$Year[i] <- "1989"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 187 & seinfeld_clean$Rownumber[i] < 1152){
+    seinfeld_clean$Year[i] <- "1990"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 1151 & seinfeld_clean$Rownumber[i] < 6787){
+    seinfeld_clean$Year[i] <- "1991"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 6786 & seinfeld_clean$Rownumber[i] < 12787){
+    seinfeld_clean$Year[i] <- "1992"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 12786 & seinfeld_clean$Rownumber[i] < 17934){
+    seinfeld_clean$Year[i] <- "1993"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 17933 & seinfeld_clean$Rownumber[i] < 23141){
+    seinfeld_clean$Year[i] <- "1994"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 23140 & seinfeld_clean$Rownumber[i] < 28839){
+    seinfeld_clean$Year[i] <- "1995"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 28838 & seinfeld_clean$Rownumber[i] < 34800){
+    seinfeld_clean$Year[i] <- "1996"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 34799 & seinfeld_clean$Rownumber[i] < 40404){
+    seinfeld_clean$Year[i] <- "1997"
+  }
+  else if (seinfeld_clean$Rownumber[i] > 40403){
+    seinfeld_clean$Year[i] <- "1998"
+  }
+}
+
+#write.csv(seinfeld_clean, file = "seinfeld_Year.csv")
+```
+
+
+##The office
+
+```{r}
+TO_df <- read_csv("Raw_scripts/The-Office-Lines-V4_2.csv")
+
+TO_df$Show <- "The Office"
+names(TO_df)[names(TO_df) == "season"] <- "Season"
+names(TO_df)[names(TO_df) == "episode"] <- "Episode"
+names(TO_df)[names(TO_df) == "speaker"] <- "Character"
+names(TO_df)[names(TO_df) == "line"] <- "Line"
+TO_df$...7 <- NULL
+TO_df$scene <- NULL
+TO_df$title <- NULL
+
+uniquenames <- unique(TO_df$Character)
+freqlist <- c()
+
+for (uniquename in uniquenames){
+  uniquefreq <- length(TO_df[TO_df$Character == uniquename, ]$Character)
+  freqlist <- c(freqlist, uniquefreq)
+}
+
+namefreqs <- data.frame(uniquenames,freqlist)
+
+
+top15_TO <- c("Michael","Jim","Dwight","Pam","Andy","Kevin","Angela","Erin","Oscar",
+           "Ryan","Darryl","Phyllis","Kelly","Toby","Jan")
+TO_clean <- TO_df[TO_df$Character %in% top15_TO,]
+
+#Adding gender column
+TO_clean <- mutate(TO_clean, Gender = recode(Character, 
+                                       "Michael"=0,
+                                       "Jim"=0,
+                                       "Pam"=1,
+                                       "Dwight"=0,
+                                       "Andy"=0,
+                                       "Kevin"=0,
+                                       "Angela"=1,
+                                       "Oscar"=0,
+                                       "Erin"=1, 
+                                       "Phyllis"=1,
+                                       "Darryl"=0,
+                                       "Toby"=0,
+                                       "Ryan"=0,
+                                       "Jan"=1,
+                                       "Kelly"=1))
+
+#Adding gender label
+TO_clean$Gender <- as.factor(TO_clean$Gender)
+
+TO_clean <- mutate(TO_clean, Gender_label = recode(Gender, 
+                                       "0"="male",
+                                       "1"="female"))
+TO_clean$Gender <- as.numeric(TO_clean$Gender)
+
+#checking if all 15 characters are in the df
+length(unique(TO_clean$Character))
+
+#Adding year
+TO_clean$Rownumber <- 1:nrow(TO_clean)
+TO_clean$Year <- 0
+
+for (i in 1:nrow(TO_clean)){
+  if (TO_clean$Rownumber[i] < 3728){
+    TO_clean$Year[i] <- "2005"
+  }
+  else if (TO_clean$Rownumber[i] > 3727 & TO_clean$Rownumber[i] < 8753){
+    TO_clean$Year[i] <- "2006"
+  }
+  else if (TO_clean$Rownumber[i] > 8752 & TO_clean$Rownumber[i] < 14253){
+    TO_clean$Year[i] <- "2007"
+  }
+  else if (TO_clean$Rownumber[i] > 14252 & TO_clean$Rownumber[i] < 18380){
+    TO_clean$Year[i] <- "2008"
+  }
+  else if (TO_clean$Rownumber[i] > 18379 & TO_clean$Rownumber[i] < 25497){
+    TO_clean$Year[i] <- "2009"
+  }
+  else if (TO_clean$Rownumber[i] > 25496 & TO_clean$Rownumber[i] < 31028){
+    TO_clean$Year[i] <- "2010"
+  }
+  else if (TO_clean$Rownumber[i] > 31027 & TO_clean$Rownumber[i] < 36014){
+    TO_clean$Year[i] <- "2011"
+  }
+  else if (TO_clean$Rownumber[i] > 36013 & TO_clean$Rownumber[i] < 40780){
+    TO_clean$Year[i] <- "2012"
+  }
+  else if (TO_clean$Rownumber[i] > 40779){
+    TO_clean$Year[i] <- "2013"
+  }
+}
+
+#write.csv(TO_clean, file = "The_Office_Year.csv")
+```
+
+
+##How I met your mother
+```{r}
+HIMYM_df_new <- read_csv("Raw_scripts/HIMYM_data.csv")
+
+HIMYM_df_new$Show <- "How I met your mother"
+names(HIMYM_df_new)[names(HIMYM_df_new) == "season"] <- "Season"
+names(HIMYM_df_new)[names(HIMYM_df_new) == "episode"] <- "Episode"
+names(HIMYM_df_new)[names(HIMYM_df_new) == "actor"] <- "Character"
+names(HIMYM_df_new)[names(HIMYM_df_new) == "text"] <- "Line"
+HIMYM_df_new$title <- NULL
+
+uniquenames <- unique(HIMYM_df_new$Character)
+freqlist <- c()
+
+for (uniquename in uniquenames){
+  uniquefreq <- length(HIMYM_df_new[HIMYM_df_new$Character == uniquename, ]$Character)
+  freqlist <- c(freqlist, uniquefreq)
+}
+
+namefreqs <- data.frame(uniquenames,freqlist)
+
+top15_HIMYM <- c("Ted","Barney","Marshall","Robin","Lily","Stella","Zoey","Victoria","Nora",
+           "Jerry","Mr Druthers","Don","James","Arthur","Ranjit")
+HIMYM_clean <- HIMYM_df_new[HIMYM_df_new$Character %in% top15_HIMYM,]
+
+#Adding gender column
+HIMYM_clean <- mutate(HIMYM_clean, Gender = recode(Character, 
+                                       "Ted"=0,
+                                       "Barney"=0,
+                                       "Robin"=1,
+                                       "Marshall"=0,
+                                       "Lily"=1,
+                                       "Stella"=1,
+                                       "Zoey"=1,
+                                       "Victoria"=1,
+                                       "Nora"=1, 
+                                       "Jerry"=0,
+                                       "Mr Druthers"=0,
+                                       "Don"=0,
+                                       "James"=0,
+                                       "Arthur"=0,
+                                       "Ranjit"=0))
+
+#Adding gender label
+HIMYM_clean$Gender <- as.factor(HIMYM_clean$Gender)
+
+HIMYM_clean <- mutate(HIMYM_clean, Gender_label = recode(Gender, 
+                                       "0"="male",
+                                       "1"="female"))
+HIMYM_clean$Gender <- as.numeric(HIMYM_clean$Gender)
+
+#checking if all 15 characters are in the df
+length(unique(HIMYM_clean$Character))
+
+#Adding year
+HIMYM_clean$Rownumber <- 1:nrow(HIMYM_clean)
+HIMYM_clean$Year <- 0
+
+for (i in 1:nrow(HIMYM_clean)){
+  if (HIMYM_clean$Rownumber[i] < 2332){
+    HIMYM_clean$Year[i] <- "2005"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 2331 & HIMYM_clean$Rownumber[i] < 6791){
+    HIMYM_clean$Year[i] <- "2006"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 6790 & HIMYM_clean$Rownumber[i] < 10202){
+    HIMYM_clean$Year[i] <- "2007"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 10201 & HIMYM_clean$Rownumber[i] < 13511){
+    HIMYM_clean$Year[i] <- "2008"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 13510 & HIMYM_clean$Rownumber[i] < 17808){
+    HIMYM_clean$Year[i] <- "2009"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 17807 & HIMYM_clean$Rownumber[i] < 22118){
+    HIMYM_clean$Year[i] <- "2010"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 22117 & HIMYM_clean$Rownumber[i] < 24731){
+    HIMYM_clean$Year[i] <- "2011"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 24730 & HIMYM_clean$Rownumber[i] < 24869){
+    HIMYM_clean$Year[i] <- "2012"
+  }
+  else if (HIMYM_clean$Rownumber[i] > 24868){
+    HIMYM_clean$Year[i] <- "2013"
+  }
+} 
+
+#write.csv(HIMYM_clean, file = "How_I_met_your_mother_Year.csv")
+```
+
+#Combine the datasets
+```{r}
+combined <- rbind(clean, friends_clean, PaR_clean, HIMYM_clean, TO_clean, seinfeld_clean, frasier_clean)
+
+#remove all lines with fewer than 4 words
+combined$N_words <- sapply(strsplit(combined$Line, " "),length)
+#N_words are 1 bigger than the actual word count of the sentences:
+combined$N_words <- combined$N_words-1
+
+subset_combined <- subset(combined, N_words > 3)
+```
+
+
+##Adding a year-group column
+```{r}
+subset_combined$Year_groups <- 0
+
+group1 <- subset(subset_combined, Year == "1989")
+group1$Year_groups <- "1989-1993"
+group2 <- subset(subset_combined, Year == "1990")
+group2$Year_groups <- "1989-1993"
+group3 <- subset(subset_combined, Year == "1991")
+group3$Year_groups <- "1989-1993"
+group4 <- subset(subset_combined, Year == "1992")
+group4$Year_groups <- "1989-1993"
+group5 <- subset(subset_combined, Year == "1993")
+group5$Year_groups <- "1989-1993"
+group6 <- subset(subset_combined, Year == "1994")
+group6$Year_groups <- "1994-1997"
+group7 <- subset(subset_combined, Year == "1995")
+group7$Year_groups <- "1994-1997"
+group8 <- subset(subset_combined, Year == "1996")
+group8$Year_groups <- "1994-1997"
+group9 <- subset(subset_combined, Year == "1997")
+group9$Year_groups <- "1994-1997"
+group10 <- subset(subset_combined, Year == "1998")
+group10$Year_groups <- "1998-2001"
+group11 <- subset(subset_combined, Year == "1999")
+group11$Year_groups <- "1998-2001"
+group12 <- subset(subset_combined, Year == "2000")
+group12$Year_groups <- "1998-2001"
+group13 <- subset(subset_combined, Year == "2001")
+group13$Year_groups <- "1998-2001"
+group14 <- subset(subset_combined, Year == "2002")
+group14$Year_groups <- "2002-2005"
+group15 <- subset(subset_combined, Year == "2003")
+group15$Year_groups <- "2002-2005"
+group16 <- subset(subset_combined, Year == "2004")
+group16$Year_groups <- "2002-2005"
+group17 <- subset(subset_combined, Year == "2005")
+group17$Year_groups <- "2002-2005"
+group18 <- subset(subset_combined, Year == "2006")
+group18$Year_groups <- "2006-2009"
+group19 <- subset(subset_combined, Year == "2007")
+group19$Year_groups <- "2006-2009"
+group20 <- subset(subset_combined, Year == "2008")
+group20$Year_groups <- "2006-2009"
+group21 <- subset(subset_combined, Year == "2009")
+group21$Year_groups <- "2006-2009"
+group22 <- subset(subset_combined, Year == "2010")
+group22$Year_groups <- "2010-2013"
+group23 <- subset(subset_combined, Year == "2011")
+group23$Year_groups <- "2010-2013"
+group24 <- subset(subset_combined, Year == "2012")
+group24$Year_groups <- "2010-2013"
+group25 <- subset(subset_combined, Year == "2013")
+group25$Year_groups <- "2010-2013"
+group26 <- subset(subset_combined, Year == "2014")
+group26$Year_groups <- "2014-2017"
+group27 <- subset(subset_combined, Year == "2015")
+group27$Year_groups <- "2014-2017"
+group28 <- subset(subset_combined, Year == "2016")
+group28$Year_groups <- "2014-2017"
+group29 <- subset(subset_combined, Year == "2017")
+group29$Year_groups <- "2014-2017"
+
+groupyear_combined <- rbind(group1, group2, group3, group4, group5, group6, group7, group8, group9, group10, group11, group12, group13, group14, group15, group16, group17, group18, group19, group20, group21, group22, group23, group24, group25, group26, group27, group28, group29)
+
+write.csv(groupyear_combined, file = "Clean_scripts_and_analysis/Clean_scripts.csv")
+```
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

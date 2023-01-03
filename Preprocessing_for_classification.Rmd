@@ -1,0 +1,148 @@
+---
+title: "Preprocessing_for_classification"
+author: "Kasper & Manon"
+date: "2023-01-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Loading packages
+install.packages("pacman")
+pacman::p_load(tidyverse, lmerTest, stats)
+```
+
+```{r}
+#Load in the clean scripts
+groupyear_combined <- read_csv("Clean_scripts_and_analysis/Clean_scripts.csv")
+```
+```{r}
+#Downsampling to get a even amount of data points for male and female across year groups
+groupyear_combined$Year_groups <- as.factor(groupyear_combined$Year_groups)
+groupyear_combined$Gender_label <- as.factor(groupyear_combined$Gender_label)
+y1989 <- subset(groupyear_combined, Year_groups == "1989-1993")
+y1994 <- subset(groupyear_combined, Year_groups == "1994-1997")
+y1998 <- subset(groupyear_combined, Year_groups == "1998-2001")
+y2002 <- subset(groupyear_combined, Year_groups == "2002-2005")
+y2006 <- subset(groupyear_combined, Year_groups == "2006-2009")
+y2010 <- subset(groupyear_combined, Year_groups == "2010-2013")
+y2014 <- subset(groupyear_combined, Year_groups == "2014-2017")
+
+df_list <- list(y1989, y1994, y1998, y2002, y2006, y2010, y2014)
+
+# Loop through the dataframes and downsample one class to match the size of the other class
+
+# Create an empty list to store the downsampled dataframes
+df_downsampled_list <- list()
+
+# Loop through the dataframes and downsample the majority class
+for (i in df_list) {
+  # Find the class labels and the number of examples in each class
+  class_labels <- unique(i$Gender_label)
+  class_counts <- table(i$Gender_label)
+
+  # Find the class with the smallest number of examples
+  min_class <- names(which.min(class_counts))
+
+  # Select a random subset of the majority class that has the same size as the minority class
+  df_majority <- i[i$Gender_label == min_class, ]
+  df_minority <- i[i$Gender_label != min_class, ]
+  df_downsampled <- rbind(df_majority, df_minority[sample(nrow(df_minority), size = nrow(df_majority)), ])
+
+  # Add the downsampled dataframe to the list
+  df_downsampled_list[[length(df_downsampled_list) + 1]] <- df_downsampled
+}
+
+
+downsampled_y1989 <- df_downsampled_list[[1]]
+downsampled_y1994 <- df_downsampled_list[[2]]
+downsampled_y1998 <- df_downsampled_list[[3]]
+downsampled_y2002 <- df_downsampled_list[[4]]
+downsampled_y2006 <- df_downsampled_list[[5]]
+downsampled_y2010 <- df_downsampled_list[[6]]
+downsampled_y2014 <- df_downsampled_list[[7]]
+
+#Shuffle the data before creating test-sets
+shuf_y1989 <- downsampled_y1989[sample(nrow(downsampled_y1989)), ]
+shuf_y1994 <- downsampled_y1994[sample(nrow(downsampled_y1994)), ]
+shuf_y1998 <- downsampled_y1998[sample(nrow(downsampled_y1998)), ]
+shuf_y2002 <- downsampled_y2002[sample(nrow(downsampled_y2002)), ]
+shuf_y2006 <- downsampled_y2006[sample(nrow(downsampled_y2006)), ]
+shuf_y2010 <- downsampled_y2010[sample(nrow(downsampled_y2010)), ]
+shuf_y2014 <- downsampled_y2014[sample(nrow(downsampled_y2014)), ]
+
+# Set the seed for the random number generator
+set.seed(123)
+
+#Split the data into training and test on all the year group datasets
+# Split the data into training and test sets
+train_1989 <- shuf_y1989[sample(nrow(shuf_y1989), size = round(0.9 * nrow(shuf_y1989))), ]
+test_1989 <- shuf_y1989[-sample(nrow(train_1989), size = nrow(train_1989)), ]
+
+# Split the data into training and test sets
+train_1994 <- shuf_y1994[sample(nrow(shuf_y1994), size = round(0.9 * nrow(shuf_y1994))), ]
+test_1994 <- shuf_y1994[-sample(nrow(train_1994), size = nrow(train_1994)), ]
+
+# Split the data into training and test sets
+train_1998 <- shuf_y1998[sample(nrow(shuf_y1998), size = round(0.9 * nrow(shuf_y1998))), ]
+test_1998 <- shuf_y1998[-sample(nrow(train_1998), size = nrow(train_1998)), ]
+
+# Split the data into training and test sets
+train_2002 <- shuf_y2002[sample(nrow(shuf_y2002), size = round(0.9 * nrow(shuf_y2002))), ]
+test_2002 <- shuf_y2002[-sample(nrow(train_2002), size = nrow(train_2002)), ]
+
+# Split the data into training and test sets
+train_2006 <- shuf_y2006[sample(nrow(shuf_y2006), size = round(0.9 * nrow(shuf_y2006))), ]
+test_2006 <- shuf_y2006[-sample(nrow(train_2006), size = nrow(train_2006)), ]
+
+# Split the data into training and test sets
+train_2010 <- shuf_y2010[sample(nrow(shuf_y2010), size = round(0.9 * nrow(shuf_y2010))), ]
+test_2010 <- shuf_y2010[-sample(nrow(train_2010), size = nrow(train_2010)), ]
+
+# Split the data into training and test sets
+train_2014 <- shuf_y2014[sample(nrow(shuf_y2014), size = round(0.9 * nrow(shuf_y2014))), ]
+test_2014 <- shuf_y2014[-sample(nrow(train_2014), size = nrow(train_2014)), ]
+
+Trainingdata <- rbind(train_1989, train_1994, train_1998, train_2002, train_2006, train_2010, train_2014)
+
+write.csv(Trainingdata, file = "Data_for_classification/training_for_GM.csv")
+
+write.csv(test_1989, file = "Data_for_classification/test89.csv")
+write.csv(test_1994, file = "Data_for_classification/test94.csv")
+write.csv(test_1998, file = "Data_for_classification/test98.csv")
+write.csv(test_2002, file = "Data_for_classification/test02.csv")
+write.csv(test_2006, file = "Data_for_classification/test06.csv")
+write.csv(test_2010, file = "Data_for_classification/test10.csv")
+write.csv(test_2014, file = "Data_for_classification/test14.csv")
+
+write.csv(train_1989, file = "Data_for_classification/train89.csv")
+write.csv(train_1994, file = "Data_for_classification/train94.csv")
+write.csv(train_1998, file = "Data_for_classification/train98.csv")
+write.csv(train_2002, file = "Data_for_classification/train02.csv")
+write.csv(train_2006, file = "Data_for_classification/train06.csv")
+write.csv(train_2010, file = "Data_for_classification/train10.csv")
+write.csv(train_2014, file = "Data_for_classification/train14.csv")
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
