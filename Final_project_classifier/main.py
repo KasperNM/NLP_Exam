@@ -1,9 +1,9 @@
-#Main
+#Main 
+#Importing packages
 import torch
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from transformers import BertTokenizer, BertForSequenceClassification
 from sklearn.model_selection import train_test_split
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,23 +12,24 @@ from tqdm import trange
 import random
 from data import read_data, preprocess_id_and_ams, get_validation_and_train_dataloader, preprocess_test
 
-def b_tp(preds, labels):
-  '''Returns True Positives (TP): count of correct predictions of actual class 1'''
-  return sum([preds == labels and preds == 1 for preds, labels in zip(preds, labels)])
+# Prepare performance metrics to evaluate training
+def count_tp(predictions, labels):
+  #Counting true positives
+  return sum([predictions == labels and predictions == 1 for predictions, labels in zip(predictions, labels)])
 
-def b_fp(preds, labels):
-  '''Returns False Positives (FP): count of wrong predictions of actual class 1'''
-  return sum([preds != labels and preds == 1 for preds, labels in zip(preds, labels)])
+def count_fp(predictions, labels):
+  #Counting false Positives
+  return sum([predictions != labels and predictions == 1 for predictions, labels in zip(predictions, labels)])
 
-def b_tn(preds, labels):
-  '''Returns True Negatives (TN): count of correct predictions of actual class 0'''
-  return sum([preds == labels and preds == 0 for preds, labels in zip(preds, labels)])
+def count(predictions, labels):
+  #Counting true Negatives
+  return sum([predictions == labels and predictions == 0 for predictions, labels in zip(predictions, labels)])
 
-def b_fn(preds, labels):
-  '''Returns False Negatives (FN): count of wrong predictions of actual class 0'''
-  return sum([preds != labels and preds == 0 for preds, labels in zip(preds, labels)])
+def count(predictions, labels):
+  #Counting false Negatives
+  return sum([predictions != labels and predictions == 0 for predictions, labels in zip(predictions, labels)])
 
-def b_metrics(preds, labels):
+def b_metrics(predictions, labels):
   '''
   Returns the following metrics:
     - accuracy    = (TP + TN) / N
@@ -36,30 +37,50 @@ def b_metrics(preds, labels):
     - recall      = TP / (TP + FN)
     - specificity = TN / (TN + FP)
   '''
-  preds = np.argmax(preds, axis = 1).flatten()
+  # Calculate accuracy, precision, recall, and specificity
+  preds = np.argmax(predictions, axis = 1).flatten()
   labels = labels.flatten()
-  tp = b_tp(preds, labels)
-  tn = b_tn(preds, labels)
-  fp = b_fp(preds, labels)
-  fn = b_fn(preds, labels)
+  # Counting true positives
+  tp = count_tp(preds, labels)
+  # Counting true negatives
+  tn = count_tn(preds, labels)
+  # Counting false positives
+  fp = count_fp(preds, labels)
+  # Counting true negatives
+  fn = count_fn(preds, labels)
+  # Calculating accuracy
   b_accuracy = (tp + tn) / len(labels)
+  # Calculating precision
   b_precision = tp / (tp + fp) if (tp + fp) > 0 else 'nan'
+  # Calculating recall
   b_recall = tp / (tp + fn) if (tp + fn) > 0 else 'nan'
+  # Calculating specificity
   b_specificity = tn / (tn + fp) if (tn + fp) > 0 else 'nan'
   return b_accuracy, b_precision, b_recall, b_specificity
 
+'''Main function: This function takes in other predefined functions from data.py to train
+and evaluate the model'''
 def main():
+  # Specifying the path to load in data for training and test data
+  # Trainingsdata path
   train_path = '/Data_for_classification/train89.csv'
+  # Testdata path
   test_path = '/Data_for_classification/test89.csv'
-
+  
+  # Reading in the data using a predefined function from data.py
   train_text, train_labels, test_text, test_labels, tensor_train_labels, tensor_test_labels = read_data(train_path, test_path)
-
+  
+  # Getting token ids and attention_masks from the preprocessed training text
   token_id, attention_masks = preprocess_id_and_ams(train_text)
+  
+  #Test set is preprocessed the same way
+  test_token_id, test_attention_masks = preprocess_test(test_text)
 
+  # Call the train and validation dataloader functions
+  # The batch size is set to 64 and validation set i specified as 2.5% of trainingsdata
   train_dataloader, validation_dataloader = get_validation_and_train_dataloader(tensor_train_labels, token_id, attention_masks, 64, 0.025)
 
-  test_token_id, test_attention_masks = preprocess_test(test_text)
-  # Load the BertForSequenceClassification model
+  # Loading in the BertForSequenceClassification model
   model = BertForSequenceClassification.from_pretrained(
       'bert-base-uncased',
       num_labels = 2,
@@ -67,13 +88,14 @@ def main():
       output_hidden_states = False,
   )
 
-  # Recommended learning rates (Adam): 5e-5, 3e-5, 2e-5. See: https://arxiv.org/pdf/1810.04805.pdf
+  # Learning rate is set to 2e-5 and a small epsilon to avoid division with zero
   optimizer = torch.optim.AdamW(model.parameters(), 
                                 lr = 2e-5,
                                 eps = 1e-08
                                 )
 
-  # Run on GPU preferable:
+  # This classification is run on cuda
+  # If your machine is unable to run cuda the device is set to cpu
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   if (device == 'cuda'):
@@ -81,50 +103,53 @@ def main():
   else:
     pass
 
-  print(device)
-  
-  # Recommended number of epochs: 2, 3, 4. See: https://arxiv.org/pdf/1810.04805.pdf
-  epochs = 4
+  # It is chosen to run training on 4 epochs
+  n_epochs = 4
 
-  for _ in trange(epochs, desc = 'Epoch'):
+  for _ in trange(n_epochs, desc = 'Epoch'):
       
-      # ========== Training ==========
+      #  Training 
       
-      # Set model to training mode
+      # The model is set to training mode
       model.train()
       
-      # Tracking variables
+      # Tracking multiple variables
+      # The training loss and the number of training examples and steps are initialized to 0
       tr_loss = 0
       nb_tr_examples, nb_tr_steps = 0, 0
-
+      
+      # A loop that iterates over trainingdata, in batches
       for step, batch in enumerate(train_dataloader):
           batch = tuple(t.to(device) for t in batch)
           b_input_ids, b_input_mask, b_labels = batch
+          #For each batch of data, the optimizer's gradient is set to zero
           optimizer.zero_grad()
           # Forward pass
           train_output = model(b_input_ids, 
                               token_type_ids = None, 
                               attention_mask = b_input_mask, 
                               labels = b_labels)
-          # Backward pass
+          # training loss and gradients are computed
           train_output.loss.backward()
+          #updating the models parameters
           optimizer.step()
-          # Update tracking variables
+          # Updating the variables we are tracking
           tr_loss += train_output.loss.item()
           nb_tr_examples += b_input_ids.size(0)
           nb_tr_steps += 1
 
-      # ========== Validation ==========
+      # Validation 
 
-      # Set model to evaluation mode
+      # For evaluation on the validationdata the model is set to eval mode
       model.eval()
 
-      # Tracking variables 
+      # Tracking variables (these were defined earlier as well)
       val_accuracy = []
       val_precision = []
       val_recall = []
       val_specificity = []
-
+      
+      #iterate through batches
       for batch in validation_dataloader:
           batch = tuple(t.to(device) for t in batch)
           b_input_ids, b_input_mask, b_labels = batch
@@ -135,14 +160,16 @@ def main():
                                 attention_mask = b_input_mask)
           logits = eval_output.logits.detach().cpu().numpy()
           label_ids = b_labels.to('cpu').numpy()
-          # Calculate validation metrics
+          # Calculate validation metrics previously specified
           b_accuracy, b_precision, b_recall, b_specificity = b_metrics(logits, label_ids)
+          # Getting the accuracy metric
           val_accuracy.append(b_accuracy)
-          # Update precision only when (tp + fp) !=0; ignore nan
+          # We are only updating precision, recall, and specificity when the metric calculation is !=0
+          # nan is ignored
           if b_precision != 'nan': val_precision.append(b_precision)
-          # Update recall only when (tp + fn) !=0; ignore nan
+          
           if b_recall != 'nan': val_recall.append(b_recall)
-          # Update specificity only when (tn + fp) !=0; ignore nan
+          
           if b_specificity != 'nan': val_specificity.append(b_specificity)
 
       print('\n\t - Train loss: {:.4f}'.format(tr_loss / nb_tr_steps))
@@ -153,14 +180,14 @@ def main():
 
   eval_model(model, test_token_id, test_attention_masks, tensor_test_labels)
 
-
+#Now we evaluate the trained model
 def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, batch_size=64):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   if (device == 'cuda'):
     model.cuda()
   else:
     pass
-  # Indices of the train and validation splits stratified by labels
+  #Same preperation procedure for the testset 
   test_set = TensorDataset(test_token_id, test_attention_masks, tensor_test_labels)
   test_dataloader = DataLoader(test_set, batch_size=batch_size, sampler = RandomSampler(test_set), shuffle=False)
 
@@ -170,8 +197,6 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
 
   # Set the model to evaluation mode
   model.eval()
-  # Iterate over the test dataloader
-  # Iterate over the test dataloader
   # Iterate over the test dataloader
   for inputs, attention_mask, labels in test_dataloader:
     # Move input and label tensors to the correct device
@@ -205,7 +230,8 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
   precision = precision_score(true_labels, predictions)
   recall = recall_score(true_labels, predictions)
   f1 = f1_score(true_labels, predictions)
-
+  
+  #Print performance metrics
   print('Precision: ', precision)
   print('Recall: ', recall)
   print('F1 score: ', f1)
@@ -248,7 +274,7 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
   plt.show()
   fig.savefig("/plots/confusion_matrix.png")
 
-
+#Run main()
 if __name__ == "__main__":
    #args = parseArguments()
     main()

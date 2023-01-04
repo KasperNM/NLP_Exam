@@ -1,0 +1,143 @@
+---
+title: "Samlet topic analyse"
+author: "Manon Grandjean"
+date: '2023-01-01'
+output: html_document
+---
+
+```{r load packages}
+library(tidyverse)
+```
+
+
+```{r load data}
+df <- read.csv("Data/samlet_topic_topicsperclass.csv")
+```
+
+
+```{r edit data}
+df$Gender[df$Class == "female"] <- "Female"
+df$Gender[df$Class == "male"] <- "Male"
+df$linespergender[df$Class == "female"] <- 70194
+df$linespergender[df$Class == "male"] <- 147240
+
+df$Proportional_occurence <- df$Frequency / df$linespergender
+```
+
+
+```{r list 'bad' topics}
+# There are either topics that are specific to the selected shows (character names), or have vague representations
+badtopics <- c(-1,0,1,2,3,5,6,7,9,10,11,12,17,18,19,20,21,40,44,70,82,86)
+```
+
+
+```{r create proportional occurence x difference labels}
+f <- subset(df, df$Gender == "Female")
+m <- subset(df, df$Gender == "Male")
+
+data <- f[c("Topic", "Words", "Frequency", "Proportional_occurence")]
+colnames(data) <- c("Topic", "Words", "f_Frequency", "f_Proportional_occurence")
+
+m_ <- m[c("Topic", "Words", "Frequency", "Proportional_occurence")]
+colnames(m_) <- c("Topic", "m_Words", "m_Frequency", "m_Proportional_occurence")
+
+
+merged <- merge(data, m_, by = "Topic")
+
+options(scipen = 999)
+
+# calculate difference in proportional occurrence (if negative, topic is less frequent in female group)
+merged$Diff_Prop_Oc <- merged$f_Proportional_occurence - merged$m_Proportional_occurence
+
+# calculate difference in proportional occurrence in x (if 1, they are equal, if > 1 it is more frequent in female group)
+merged$X_Prop_Oc <- merged$f_Proportional_occurence / merged$m_Proportional_occurence
+
+
+
+# add diff_prop_oc to big dataframe
+diff_df <- merged[c("Topic", "Diff_Prop_Oc", "X_Prop_Oc")]
+
+df <- merge(df, diff_df, by = "Topic")
+```
+
+
+```{r topics with biggest difference}
+dfgood <- filter(df, !(df$Topic %in% badtopics))
+
+df_bigdif <- top_n(dfgood, 10, X_Prop_Oc)
+df_lildif <- top_n(dfgood, -10, X_Prop_Oc)
+
+df_topbottom <- rbind(df_bigdif, df_lildif)
+
+topbottom <- df_topbottom %>%
+  group_by(Topic) %>%
+  summarise(Words = paste(Words, collapse = ", "), X_Prop_Oc = mean(X_Prop_Oc))
+```
+
+
+```{r top topics per gender}
+fgood <- filter(f, !(f$Topic %in% badtopics))
+mgood <- filter(m, !(m$Topic %in% badtopics))
+
+view(fgood[c("Topic", "Words", "Frequency")][1:10,])
+view(mgood[c("Topic", "Words", "Frequency")][1:10,])
+```
+
+
+```{r topic names}
+# take topic number and add first word of topic to create topic
+mgood$Topic_Name <- sapply(mgood$Words, function(x) {
+  split_string <- strsplit(x, ",")[[1]]
+  return(split_string[1])
+})
+
+df_topicnames <- mgood[c("Topic", "Topic_Name")]
+
+dfgood <- merge(dfgood, df_topicnames, by = "Topic")
+dfgood$Topic_Name2 <- paste(dfgood$Topic, dfgood$Topic_Name, sep = " ")
+```
+
+
+```{r plot}
+# make labels rounded, and as characters
+dfgood$X_Prop_Oc <- round(dfgood$X_Prop_Oc, 2)
+dfgood$X_Prop_Oc <- as.character(dfgood$X_Prop_Oc)
+
+# where proportional occurrence is higher in females
+df_f_higher <- filter(dfgood, dfgood$X_Prop_Oc > 1)
+df_f_higher$X_Prop_Oc[df_f_higher$Gender == "Male"] <- ""
+#remove labels between 0.9 and 1.1
+df_f_higher$X_Prop_Oc[df_f_higher$X_Prop_Oc > 0.8 & df_f_higher$X_Prop_Oc < 1.2] <- ""
+
+ggplot(df_f_higher, aes(x = reorder(Topic_Name2, Topic), y = Proportional_occurence, fill = Gender))+
+  geom_bar(position = "dodge", stat = "identity", color = "black", width = 0.7)+
+  ylab("% of lines")+
+  xlab("Topic")+
+  theme_linedraw()+
+  theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust = 1))+
+  scale_y_continuous(labels = scales::percent)+
+  geom_text(aes(label = X_Prop_Oc), nudge_y = 0.0001, nudge_x = 0, size = 3)+
+  ggtitle("Proportional occurrence of topics")
+
+
+
+
+# where proportional occurrence is equal or lower in females
+df_f_ <- filter(dfgood, dfgood$X_Prop_Oc <= 1)
+df_f_$X_Prop_Oc[df_f_$Gender == "Female"] <- ""
+#remove labels between 0.9 and 1.1
+df_f_$X_Prop_Oc[df_f_$X_Prop_Oc > 0.8 & df_f_$X_Prop_Oc < 1.2] <- ""
+
+ggplot(df_f_, aes(x = reorder(Topic_Name2, Topic), y = Proportional_occurence, fill = Gender))+
+  geom_bar(position = "dodge", stat = "identity", color = "black", width = 0.7)+
+  ylab("% of lines")+
+  xlab("Topic")+
+  theme_linedraw()+
+  theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust = 1))+
+  scale_y_continuous(labels = scales::percent)+
+  geom_text(aes(label = X_Prop_Oc), nudge_y = 0.0001, nudge_x = 0, size = 3)+
+  ggtitle("Proportional occurrence of topics")
+```
+
+
+

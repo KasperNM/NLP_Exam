@@ -1,0 +1,247 @@
+---
+title: "NLP vis"
+author: "Manon Grandjean"
+date: '2022-12-26'
+output: html_document
+---
+
+```{r load packages}
+library(tidyverse)
+library(reshape2)
+```
+
+# Classification
+Visualize classifier test metrics over time
+```{r}
+# classification scores trained on all-time data
+CL_scores <- data.frame(Year_group = c("1989-1993","1994-1997","1998-2001","2002-2005","2006-2009","2010-2013","2014-2017"),
+                        Accuracy = c(0.853, 0.880, 0.879, 0.874, 0.863, 0.862, 0.856),
+                        Precision = c(0.821, 0.850, 0.838, 0.826, 0.832, 0.815, 0.809),
+                        Recall = c(0.923, 0.919, 0.944, 0.931, 0.909, 0.939, 0.933),
+                        f1_score = c(0.869, 0.883, 0.888, 0.875, 0.869, 0.873, 0.867)
+                        )
+
+CL_scores$Year_group <- as.factor(CL_scores$Year_group)
+
+# classification scores trained on each year group
+CL_2 <- data.frame(Year_group = c("1989-1993","1994-1997","1998-2001","2002-2005","2006-2009","2010-2013","2014-2017"),
+                        Accuracy = c(0.886, 0.925, 0.931, 0.930, 0.927, 0.902, 0.885),
+                        Precision = c(0.845, 0.912, 0.917, 0.930, 0.903, 0.867, 0.850),
+                        Recall = c(0.960, 0.939, 0.951, 0.922, 0.956, 0.951, 0.936),
+                        f1_score = c(0.899,0.925, 0.933, 0.926, 0.929, 0.907, 0.891)
+                        )
+
+CL_2$Year_group <- as.factor(CL_2$Year_group)
+```
+
+
+```{r trained on all-time}
+# We are going to take the average of every variable per Year_group (no average since only one datapoint)
+my_group <- group_by(CL_scores, Year_group)
+CL_scores_mean <- summarise_all(my_group, mean)
+
+# Now we melt the table
+CL_scores_melt <- melt(CL_scores_mean, id = "Year_group")
+
+# Plot
+ggplot(data = CL_scores_melt) +
+  geom_line(aes(x = Year_group, y = value, colour = variable, group = variable, size = variable))+
+  scale_size_manual(values = c(1.5, 0.5, 0.5, 0.5))+
+  theme_linedraw()+
+  xlab("Year group")+
+  ylab("Performance")+
+  labs(color = "", size = "")
+```
+
+
+
+```{r individually trained}
+# We are going to take the average of every variable per Year_group (no average since only one datapoint)
+my_group2 <- group_by(CL_2, Year_group)
+CL_2_mean <- summarise_all(my_group2, mean)
+
+# Now we melt the table
+CL_2_melt <- melt(CL_2_mean, id = "Year_group")
+
+# Plot
+ggplot(data = CL_2_melt) +
+  geom_line(aes(x = Year_group, y = value, colour = variable, group = variable, size = variable))+
+  scale_size_manual(values = c(1.5, 0.5, 0.5, 0.5))+
+  theme_linedraw()+
+  xlab("Year group")+
+  ylab("Performance")+
+  labs(color = "", size = "")
+```
+
+
+
+# Summary of data
+Plot amount of lines for each gender per show and on average
+```{r}
+df <- read.csv("Data/output_sentiment_neutral.csv")
+freq <- count(df, Show, Gender_label)
+
+# add totals per show
+count(df, Show)
+freq$showtotal[freq$Show == "Frasier"] <- 39020
+freq$showtotal[freq$Show == "Friends"] <- 36537
+freq$showtotal[freq$Show == "How I met your mother"] <- 17793
+freq$showtotal[freq$Show == "Parks and recreation"] <- 30246
+freq$showtotal[freq$Show == "Seinfeld"] <- 27788
+freq$showtotal[freq$Show == "The Big Bang Theory"] <- 38045
+freq$showtotal[freq$Show == "The Office"] <- 28005
+
+# add an overall for all shows
+count(df, Gender_label)
+freq <- add_row(freq,
+                Show="Overall",
+                Gender_label="female",
+                n=70194,
+                showtotal=217434)
+freq <- add_row(freq,
+                Show="Overall",
+                Gender_label="male",
+                n=147240,
+                showtotal=217434)
+
+# calculate ratios
+freq$X. <- freq$n / freq$showtotal
+
+# give it a nice order (overall first, then in order of most to least equal)
+freq$Order[freq$Show== "Overall"] <- 1
+freq$Order[freq$Show== "Parks and recreation"] <- 2
+freq$Order[freq$Show== "Friends"] <- 3
+freq$Order[freq$Show== "How I met your mother"] <- 4
+freq$Order[freq$Show== "The Big Bang Theory"] <- 5
+freq$Order[freq$Show== "The Office"] <- 6
+freq$Order[freq$Show== "Frasier"] <- 7
+freq$Order[freq$Show== "Seinfeld"] <- 8
+
+
+freq$Percent <- round(freq$X. * 100, 1)
+```
+
+```{r plot gender distribution per show}
+ggplot(freq, aes(x = reorder(Show, Order), y = X., fill = Gender_label))+
+  geom_bar(position = "dodge", stat = "identity", color = "black", width = 0.7)+
+  ylab("% of lines")+
+  xlab("Show")+
+  labs(fill = "Gender")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))+
+  scale_y_continuous(labels = scales::percent)+
+  theme_linedraw()
+```
+
+
+
+
+```{r Plot n_word distribution on gender}
+WpLpG <- count(df, Gender_label, N_words)
+
+ggplot(WpLpG, aes(x = Gender_label, y = N_words, fill = Gender_label))+
+  geom_bar(stat = "summary", color = "black", width = 0.7)+
+  geom_errorbar(stat = "summary", width = 0.4)+
+  xlab("Gender")+
+  ylab("Average number of words per line")+
+  labs(fill = "Gender")+
+  theme_linedraw()
+```
+
+
+
+```{r Plot n lines per year (with and without gender)}
+ggplot(df, aes(x = Year))+
+  geom_histogram(position = "dodge", stat = "bin", color = "black", width = 0.7, binwidth = 1)+
+  ylab("Number of lines")+
+  xlab("Year")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))+
+  theme_linedraw()
+
+ggplot(df, aes(x = Year, fill = Gender_label))+
+  geom_histogram(position = "dodge", stat = "bin", color = "black", width = 0.7, binwidth = 1)+
+  ylab("Number of lines")+
+  xlab("Year")+
+  labs(fill = "Gender")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))+
+  theme_linedraw()
+```
+
+
+# Sentiment
+```{r plot negative/neutral/positive}
+neu_df <- read.csv("Data/output_sentiment_neutral.csv")
+
+# plot absolute
+ggplot(data = neu_df, aes(x = fct_infreq(sentiment), fill = Gender_label))+
+  geom_bar(stat = "count", position = "dodge", color = "black")+
+  ggtitle("Absolute number of lines with each sentiment")+
+  xlab("Sentiment")+
+  ylab("Nr. of lines")+
+  labs(fill = "Gender")+
+  theme_linedraw()
+
+
+# calculate proportional to gender representation
+senti_neu <- count(neu_df, sentiment, Gender_label)
+count(neu_df, Gender_label)
+senti_neu <- mutate(senti_neu, total = case_when(Gender_label == 'female' ~ 70194,
+                                         Gender_label == 'male' ~ 147240))
+senti_neu$proportion <- senti_neu$n / senti_neu$total
+
+
+# plot proportional
+ggplot(data = senti_neu, aes(x = reorder(sentiment, -proportion), y = proportion, fill = Gender_label))+
+  geom_bar(stat = "identity", position = "dodge", color = "black")+
+  ggtitle("Distribution of sentiments per gender")+
+  xlab("Sentiment")+
+  ylab("% of lines")+
+  labs(fill = "Gender")+
+  scale_y_continuous(labels = scales::percent)+
+  theme_linedraw()
+```
+
+
+```{r plot the six sentiments}
+df <- read.csv("Data/emotion_df.csv")
+
+# KASPER, NOTE: hvis den emotion_df vi laver i vores github repo ikke har 1+2 gender men rettet til 0+1 så skel den væk:
+df$gender <- df$Gender - 1
+
+# plot aboslute numbers:
+ggplot(data = df, aes(x = fct_infreq(Emotion_sentiment), fill = Gender_label))+
+  geom_bar(stat = "count", position = "dodge", color = "black")+
+  ggtitle("Absolute number of lines with each sentiment")+
+  xlab("Sentiment")+
+  ylab("Nr. of lines")+
+  labs(fill = "Gender")+
+  theme_linedraw()
+
+
+# calculate proportions
+senti <- count(df, Emotion_sentiment, Gender_label)
+count(df, Gender_label)
+senti <- mutate(senti, total = case_when(Gender_label == 'female' ~ 36803,
+                                         Gender_label == 'male' ~ 76688))
+senti$proportion <- senti$n / senti$total
+
+# add significance labels (from logistic regression)
+senti$signif2 <- ""
+senti$signif2[senti$Emotion_sentiment == 'love' & senti$Gender_label == 'male'] <- "***"
+senti$signif2[senti$Emotion_sentiment == 'sadness' & senti$Gender_label == 'male'] <- "***"
+senti$signif2[senti$Emotion_sentiment == 'joy' & senti$Gender_label == 'male'] <- "*"
+senti$signif2[senti$Emotion_sentiment == 'fear' & senti$Gender_label == 'male'] <- "*"
+senti$signif2[senti$Emotion_sentiment == 'anger' & senti$Gender_label == 'male'] <- "."
+
+
+# plot proportional - with significance from logistic regression
+ggplot(data = senti, aes(x = reorder(Emotion_sentiment, -proportion), y = proportion, fill = Gender_label))+
+  geom_bar(stat = "identity", position = "dodge", color = "black")+
+  ggtitle("Distribution of sentiments per gender")+
+  geom_text(aes(label = signif2), nudge_y = 0.02, nudge_x = 0)+
+  xlab("Sentiment")+
+  ylab("% of lines")+
+  labs(fill = "Gender")+
+  scale_y_continuous(labels = scales::percent)+
+  theme_linedraw()
+```
+
