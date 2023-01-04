@@ -35,7 +35,7 @@ def main():
     # Encoding the text data using the tokenizer
     text_data = df['Line'].values
     
-    #Adding the sentiment as a column in the dataset
+    #Adding sentiment as a column in the dataset
     df['sentiment'] = df.apply(sentiment_analysis, axis=1)
     #Exporting as CSV
     df.to_csv('sentiment_neutral.csv', index=False)
