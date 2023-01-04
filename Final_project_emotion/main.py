@@ -1,5 +1,6 @@
 #Main
 #Importing packages
+import argparse
 from data import read_data, preprocess
 import pandas as pd
 import transformers
@@ -8,9 +9,9 @@ import numpy as np
 from transformers import TFAutoModelForSequenceClassification
 from scipy.special import softmax
 
-def main():
+def main(data="subset_for_emotion.csv"):
     #Reading in the data using a predefined function from data.py
-    df = read_data('neutral_removed.csv')
+    df = read_data(data)
 
     def sentiment_analysis(row):
         text = row['Line']  # Get the text from the 'Line' column
@@ -37,6 +38,20 @@ def main():
     #Adding emotion as a column in the dataset
     df['Emotion_sentiment'] = df.apply(sentiment_analysis, axis=1)
     df.to_csv('emotion_df.csv', index=False)
+
+def parseArguments():
+    # Create argument parser
+    parser = argparse.ArgumentParser()
+
+    # Optional arguments
+    parser.add_argument("-df", "--data", type=str, default='subset_for_emotion.csv')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+if __name__ == "__main__":
+    args = parseArguments()
+    main(args.data)
 
 if __name__ == "__main__":
    #args = parseArguments()

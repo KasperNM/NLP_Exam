@@ -1,5 +1,6 @@
 #Main
 #Importing packages
+import argparse
 import transformers
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
@@ -8,9 +9,9 @@ from bertopic.vectorizers import ClassTfidfTransformer
 from data import read_data
 
 #Main
-def main():
+def main(data="subset_for_topic.csv"):
     #Loading in the data and extracting lines and gender_class
-    data, lines, gender_class = read_data('Clean_scripts.csv')
+    data, lines, gender_class = read_data(data)
     
     #Removing stopwords
     vectorizer_model = CountVectorizer(stop_words="english")
@@ -30,3 +31,17 @@ def main():
     topic_model.visualize_barchart(top_n_topics=200)
     topics_per_class = topic_model.topics_per_class(lines, classes=gender_class)
     topics_per_class.to_csv("topic.csv")
+    
+def parseArguments():
+    # Create argument parser
+    parser = argparse.ArgumentParser()
+
+    # Optional arguments
+    parser.add_argument("-df", "--data", type=str, default='subset_for_topic.csv')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+if __name__ == "__main__":
+    args = parseArguments()
+    main(args.data)
