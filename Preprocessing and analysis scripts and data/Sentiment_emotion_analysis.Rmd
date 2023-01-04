@@ -23,6 +23,8 @@ neutral <- read_csv("Data_for_sentiment_analysis/sentiment_neutral.csv")
 #Removing all lines of neutral sentiment 
 ```{r}
 neutral_removed <- subset(neutral, sentiment != "neutral" )
+subset_for_emotion <- neutral_removed[1:100,]
+write.csv(subset_for_emotion, file = "subset_for_emotion.csv")
 write.csv(neutral_removed, file = "Data_for_sentiment_analysis/neutral_removed.csv")
 ```
 

@@ -813,9 +813,17 @@ group28$Year_groups <- "2014-2017"
 group29 <- subset(subset_combined, Year == "2017")
 group29$Year_groups <- "2014-2017"
 
+#Creating one big dataframe
 groupyear_combined <- rbind(group1, group2, group3, group4, group5, group6, group7, group8, group9, group10, group11, group12, group13, group14, group15, group16, group17, group18, group19, group20, group21, group22, group23, group24, group25, group26, group27, group28, group29)
 
 write.csv(groupyear_combined, file = "Clean_scripts_and_analysis/Clean_scripts.csv")
+```
+
+```{r}
+subset_for_sentiment <- groupyear_combined[1:100,]
+subset_for_topic <- groupyear_combined[1:10000,]
+write.csv(subset_for_sentiment, file = "subset_for_sentiment.csv")
+write.csv(subset_for_topic, file = "subset_for_topic.csv")
 ```
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
