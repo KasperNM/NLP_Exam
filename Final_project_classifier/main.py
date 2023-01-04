@@ -1,5 +1,6 @@
 #Main 
 #Importing packages
+import argparse
 import torch
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from transformers import BertTokenizer, BertForSequenceClassification
@@ -60,12 +61,12 @@ def b_metrics(predictions, labels):
 
 '''Main function: This function takes in other predefined functions from data.py to train
 and evaluate the model'''
-def main():
+def main(traindata='train89.csv', testdata='test89.csv'):
   # Specifying the path to load in data for training and test data
   # Trainingsdata path
-  train_path = '/Data_for_classification/train89.csv'
+  train_path = './Data_for_classification/' + traindata
   # Testdata path
-  test_path = '/Data_for_classification/test89.csv'
+  test_path = './Data_for_classification/' + testdata
   
   # Reading in the data using a predefined function from data.py
   train_text, train_labels, test_text, test_labels, tensor_train_labels, tensor_test_labels = read_data(train_path, test_path)
@@ -272,9 +273,21 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
 
   # Show the plot
   plt.show()
-  fig.savefig("/plots/confusion_matrix.png")
+  fig.savefig("./plots/confusion_matrix.png")
 
+def parseArguments():
+    # Create argument parser
+    parser = argparse.ArgumentParser()
+
+    # Optional arguments
+    parser.add_argument("-tr", "--train", type=str, default='train89.csv')
+    parser.add_argument("-te", "--test", type=str, default='test89.csv')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    return args
 #Run main()
 if __name__ == "__main__":
-   #args = parseArguments()
-    main()
+    args = parseArguments()
+    main(args.train, args.test)
