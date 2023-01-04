@@ -28,7 +28,7 @@ def read_data(train_path, test_path):
 
   return train_text, train_labels, test_text, test_labels, tensor_train_labels, tensor_test_labels
 
-#Function that retur
+#Function that returns a tokenizer that e.g. adds special tokens and returns attention mask
 def preprocessing(input_text, tokenizer):
   return tokenizer.encode_plus(
                         input_text,
@@ -39,6 +39,7 @@ def preprocessing(input_text, tokenizer):
                         return_tensors = 'pt'
                    )
 
+#Get the bert tokenizer
 def preprocess_id_and_ams(train_text):
   bert_tokenizer = BertTokenizer.from_pretrained(
     'bert-base-uncased',
@@ -47,18 +48,19 @@ def preprocess_id_and_ams(train_text):
 
   token_id = []
   attention_masks = []
-
+  #Preprocess the data using both the bert_tokenizer and the predefined tokenizer
   for sample in train_text:
     encoding_dict = preprocessing(str(sample), bert_tokenizer)
     token_id.append(encoding_dict['input_ids']) 
     attention_masks.append(encoding_dict['attention_mask'])
 
-
+  #appending values to token_id and attention_masks
   token_id = torch.cat(token_id, dim = 0)
   attention_masks = torch.cat(attention_masks, dim = 0)
 
   return token_id, attention_masks
 
+#same step for test data
 def preprocess_test(test_text):
   bert_tokenizer = BertTokenizer.from_pretrained(
     'bert-base-uncased',
@@ -72,33 +74,32 @@ def preprocess_test(test_text):
     test_token_id.append(test_encoding_dict['input_ids']) 
     test_attention_masks.append(test_encoding_dict['attention_mask'])
 
-
+  #same step for test data
   test_token_id = torch.cat(test_token_id, dim = 0)
   test_attention_masks = torch.cat(test_attention_masks, dim = 0)
 
   return test_token_id, test_attention_masks 
 
-# this tutorial wants train, val and test, so ill just let it split 'train' into those three... for now
-# https://towardsdatascience.com/fine-tuning-bert-for-text-classification-54e7df642894
+#Defining a function that splits the trainingdata and runs the TensorDataset and DataLoader functions
 def get_validation_and_train_dataloader(tensor_train_labels, token_id, attention_masks, batch_size=64, val_ratio=0.025):
   
-  # Indices of the train and validation splits stratified by labels
+  # Splitting trainingset and validationset and then stratified by labels
   train_idx, val_idx = train_test_split(
       np.arange(len(tensor_train_labels)),
       test_size = val_ratio,
       shuffle = True,
       stratify = tensor_train_labels)
 
-  # Train and validation sets
+  # Train set
   train_set = TensorDataset(token_id[train_idx], 
                             attention_masks[train_idx], 
                             tensor_train_labels[train_idx])
-
+  # Validation set
   val_set = TensorDataset(token_id[val_idx], 
                           attention_masks[val_idx], 
                           tensor_train_labels[val_idx])
 
-  # Prepare DataLoader
+  # Preparing the DataLoader function
   train_dataloader = DataLoader(
               train_set,
               sampler = RandomSampler(train_set),

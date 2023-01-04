@@ -31,13 +31,7 @@ def count(predictions, labels):
   return sum([predictions != labels and predictions == 0 for predictions, labels in zip(predictions, labels)])
 
 def b_metrics(predictions, labels):
-  '''
-  Returns the following metrics:
-    - accuracy    = (TP + TN) / N
-    - precision   = TP / (TP + FP)
-    - recall      = TP / (TP + FN)
-    - specificity = TN / (TN + FP)
-  '''
+  
   # Calculate accuracy, precision, recall, and specificity
   preds = np.argmax(predictions, axis = 1).flatten()
   labels = labels.flatten()
@@ -60,7 +54,7 @@ def b_metrics(predictions, labels):
   return b_accuracy, b_precision, b_recall, b_specificity
 
 '''Main function: This function takes in other predefined functions from data.py to train
-and evaluate the model'''
+and evaluate the model on specified data'''
 def main(traindata='train89.csv', testdata='test89.csv'):
   # Specifying the path to load in data for training and test data
   # Trainingsdata path
@@ -236,6 +230,15 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
   print('Precision: ', precision)
   print('Recall: ', recall)
   print('F1 score: ', f1)
+  
+  # Define the measures as a dictionary
+  measures = {'Accuracy': accuracy, 'Precision': precision, 'Recall': recall, 'F1 Score': f1}
+
+  # Create a dataframe from the measures dictionary
+  performance_metrics = pd.DataFrame.from_dict(measures, orient='index', columns=['Value'])
+
+  # Export the dataframe to a CSV file
+  performance_metrics.to_csv('./Results/model_performance_'+testdata, index=True, header=True)
 
   # Calculate the confusion matrix
   num_classes = 2
@@ -243,8 +246,6 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
   for t, p in zip(true_labels, predictions):
     confusion_matrix[t, p] += 1
   print('Confusion matrix: \n', confusion_matrix)
-
-  import matplotlib.pyplot as plt
 
   # Normalize the confusion matrix
   confusion_matrix = confusion_matrix.float() / confusion_matrix.sum(dim=1, keepdim=True)
