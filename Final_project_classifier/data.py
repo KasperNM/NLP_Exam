@@ -9,28 +9,27 @@ import numpy as np
 from tqdm import trange
 import random
 
+#Defining a function for reading in a dataframe for training and test
 def read_data(train_path, test_path):
   train_df = pd.read_csv(train_path, encoding='latin-1', keep_default_na=False)
   test_df = pd.read_csv(test_path, encoding='latin-1' , keep_default_na=False)
-
+  
+  #Extracting the values from the line and gender columns in the trainingset
   train_text = train_df.Line.values
   train_labels = train_df.Gender.values
 
+  #Extracting the values from the line and gender columns in the testset
   test_text = test_df.Line.values
   test_labels = test_df.Gender.values
-
+  
+  #Turns the values into tensors
   tensor_train_labels = torch.tensor(train_labels)
   tensor_test_labels = torch.tensor(test_labels)
 
   return train_text, train_labels, test_text, test_labels, tensor_train_labels, tensor_test_labels
 
+#Function that retur
 def preprocessing(input_text, tokenizer):
-  '''
-  Returns <class transformers.tokenization_utils_base.BatchEncoding> with the following fields:
-    - input_ids: list of token ids
-    - token_type_ids: list of token type ids
-    - attention_mask: list of indices (0,1) specifying which tokens should considered by the model (return_attention_mask = True).
-  '''
   return tokenizer.encode_plus(
                         input_text,
                         add_special_tokens = True,

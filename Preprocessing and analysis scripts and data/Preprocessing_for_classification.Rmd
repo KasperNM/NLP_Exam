@@ -20,6 +20,8 @@ pacman::p_load(tidyverse, lmerTest, stats)
 groupyear_combined <- read_csv("Clean_scripts_and_analysis/Clean_scripts.csv")
 ```
 ```{r}
+#convert the gender column to 0 and 1 instead of 1 and 2
+groupyear_combined$Gender <- groupyear_combined$Gender-1
 #Downsampling to get a even amount of data points for male and female across year groups
 groupyear_combined$Year_groups <- as.factor(groupyear_combined$Year_groups)
 groupyear_combined$Gender_label <- as.factor(groupyear_combined$Gender_label)
