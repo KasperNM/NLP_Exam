@@ -111,3 +111,4 @@ python3 main.py --data subset_for_topic.csv
 deactivate 
 ```
 This model outputs a dataframe with topics, frequency, and gender
+Note: The topic model has occasionally shown to have some trouble running in VScode due to the hdbscan package from bertopic. However, The analysis ran smoothly in google colab
