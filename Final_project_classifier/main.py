@@ -22,11 +22,11 @@ def count_fp(predictions, labels):
   #Counting false Positives
   return sum([predictions != labels and predictions == 1 for predictions, labels in zip(predictions, labels)])
 
-def count(predictions, labels):
+def count_tn(predictions, labels):
   #Counting true Negatives
   return sum([predictions == labels and predictions == 0 for predictions, labels in zip(predictions, labels)])
 
-def count(predictions, labels):
+def count_fn(predictions, labels):
   #Counting false Negatives
   return sum([predictions != labels and predictions == 0 for predictions, labels in zip(predictions, labels)])
 
@@ -99,7 +99,7 @@ def main(traindata='train89.csv', testdata='test89.csv'):
     pass
 
   # It is chosen to run training on 4 epochs
-  n_epochs = 4
+  n_epochs = 1
 
   for _ in trange(n_epochs, desc = 'Epoch'):
       
