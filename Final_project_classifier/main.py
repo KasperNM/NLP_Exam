@@ -238,7 +238,7 @@ def eval_model(model, test_token_id, test_attention_masks, tensor_test_labels, b
   performance_metrics = pd.DataFrame.from_dict(measures, orient='index', columns=['Value'])
 
   # Export the dataframe to a CSV file
-  performance_metrics.to_csv('./Results/model_performance_'+testdata, index=True, header=True)
+  performance_metrics.to_csv('./Results/model_performance.csv', index=True, header=True)
 
   # Calculate the confusion matrix
   num_classes = 2
