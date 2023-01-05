@@ -4,7 +4,7 @@ The four "Final_project..." folders are analysis pipelines constructed by .py fi
 ## Preprocessing and analysis scripts and data
 R files creating in Rstudio
 Includes a folder with raw script data, a folder with preprocessed training and test data for the classification analysis from the 'Preprocessing_for_classification.Rmd',
-a folder with datasets from the sentiment analysis, and a folder with the cleaned dataframe after the initial preprocessing done in 'Data_cleaning_and_preprocessing.Rmd'
+a folder with datasets from the sentiment analysis, and a folder with the cleaned dataframe after the initial preprocessing done in 'Data_cleaning_and_preprocessing.Rmd' 
 
 ## Final_project_classifier
 Includes the full pipeline for the binary classification analysis using BERT, which is used in our project. 

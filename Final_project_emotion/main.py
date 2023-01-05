@@ -48,11 +48,9 @@ def parseArguments():
 
     # Parse arguments
     args = parser.parse_args()
+    
+    return args
 
 if __name__ == "__main__":
     args = parseArguments()
     main(args.data)
-
-if __name__ == "__main__":
-   #args = parseArguments()
-    main()
