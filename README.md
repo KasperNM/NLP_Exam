@@ -2,13 +2,13 @@
 This project includes five folders:
 The four "Final_project..." folders are analysis pipelines constructed by .py files in Python3. 
 ## Preprocessing and analysis scripts and data
-R files creating in Rstudio
+R files created in Rstudio
 Includes a folder with raw script data, a folder with preprocessed training and test data for the classification analysis from the 'Preprocessing_for_classification.Rmd',
 a folder with datasets from the sentiment analysis, and a folder with the cleaned dataframe after the initial preprocessing done in 'Data_cleaning_and_preprocessing.Rmd' 
 
 ## Final_project_classifier
 Includes the full pipeline for the binary classification analysis using BERT, which is used in our project. 
-To run the full analysis run the following code in the terminal:
+To run the analysis on the default set, run the following code in the terminal:
 ```
 bash run.sh
 ```
@@ -69,7 +69,7 @@ deactivate
 The analysis outputs a new dataframe with a column called 'sentiment' with the highest scoring sentiment of that line
 
 ## Final_project_emotion
-Includes the full pipeline for multilabel sentiment analysis of emotions done in our project. 
+Includes the full pipeline for multi-label sentiment analysis of emotions done in our project. 
 To run the code on a subset of data, type the following in the terminal:
 ```
 bash run.sh
