@@ -43,7 +43,7 @@ deactivate
 ```
 This example trains the model on train data from the years 1994-1997 and testing it data from 1994-1997. 
 The default data sets are the data from 1989-1993
-The analysis will output a CSV.file in the 'Results' folder with performance metrics and attach a confusion matrix within the folder.
+The analysis will output a CSV.file called 'model_performance.csv' with performance metrics and attach a confusion matrix within the folder.
 
 ## Final_project_sentiment
 Includes the full pipeline for sentiment analyses done on the data in our project. 
